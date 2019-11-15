@@ -184,6 +184,7 @@ public class FXMLDocumentController implements Initializable {
             
             if (input) {
                 if (btDecodificar.isDisable()) {
+                    
                     inputDir = dir.listFiles(new FileFilter() {
                         @Override
                         public boolean accept(File pathname) {
@@ -191,12 +192,15 @@ public class FXMLDocumentController implements Initializable {
                         }
                     });
                     lbInput.setText(inputDir.length + " archicos seleccionados");                    
+                    
                 } else {
+                    
                     inputDir = dir.listFiles(new FileFilter() {
                         @Override
                         public boolean accept(File pathname) { return !pathname.isDirectory(); }
                     });
                     lbInput.setText(inputDir.length + " archicos seleccionados");
+                    
                 }
                 
                 synFiles = new ListFileSyn(inputDir);
