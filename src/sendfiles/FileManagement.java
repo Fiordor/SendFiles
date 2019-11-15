@@ -29,36 +29,40 @@ public class FileManagement extends Task<Void> {
     
     public static final int MAX_FILE_SIZE = 20000000;//20MB
     
-    private File[] lisftOfFiles;
+    private ListFileSyn synFiles;
     private File outputDir;
     private String ip;
     private int port;
     private Socket client;
     
     private int option;
-    
-    public FileManagement(File outputDir, File[] listOfFiles, int option) {
-        this.outputDir = outputDir; this.lisftOfFiles = listOfFiles;
+
+    public FileManagement(File outputDir, ListFileSyn synFiles, int option) {
+        this.synFiles = synFiles; this.outputDir = outputDir;
         ip = null; port = -1; client = null;
         this.option = option;
     }
     
     private void startEncodeBase64() {
         
-        for (int i = 0; i < lisftOfFiles.length; i++) {
+        int encoded = 0;
+        
+        while (synFiles.hasNext()) {
             
+            File f = synFiles.get();
+
             try {
+                updateProgress(encoded, synFiles.length());
+                updateMessage(String.format("%d / %d > %s", encoded, synFiles.length(), f.getName()));
                 
-                updateProgress(i, lisftOfFiles.length);
-                updateMessage(String.format("%d / %d > %s", i + 1, lisftOfFiles.length, lisftOfFiles[i].getName()));
-                
-                encodeBase64(lisftOfFiles[i]);
-            }
-            catch (IOException e) {
+                encodeBase64(f);
+            } catch (IOException e) {
                 System.err.println(e);
-                updateMessage(String.format("Error en el archivo %s", lisftOfFiles[i].getName()));
+                updateMessage(String.format("Error en el archivo %s", f.getName()));
             }
+            encoded++;
         }
+        
         updateProgress(1, 1);
         updateMessage("Completado");
     }
@@ -107,43 +111,26 @@ public class FileManagement extends Task<Void> {
         return Base64.getEncoder().encodeToString(auxFileBytes);
     }
     
-    private void encodeBase64_v1(File f) throws IOException, FileNotFoundException {
-
-        FileInputStream fisReader = new FileInputStream(f);
-        
-        byte[] fileBytes = new byte[(int) f.length()];
-        fisReader.read(fileBytes);
-        
-        String encodedfile = Base64.getEncoder().encodeToString(fileBytes);
-        
-        String fName = f.getName().substring(0, f.getName().lastIndexOf('.'));
-        
-        PrintWriter pwWriter = new PrintWriter(
-                new File(outputDir.getAbsolutePath() + File.separator + fName + ".b64"));
-        
-        pwWriter.println(f.getName());
-        pwWriter.print(encodedfile);
-        
-        pwWriter.close();
-        fisReader.close();
-    }
-    
     private void startDecodeBase64() {
         
-        for (int i = 0; i < lisftOfFiles.length; i++) {
+        int decoded = 0;
+        
+        while (synFiles.hasNext()) {
             
+            File f = synFiles.get();
+
             try {
+                updateProgress(decoded, synFiles.length());
+                updateMessage(String.format("%d / %d > %s", decoded, synFiles.length(), f.getName()));
                 
-                updateProgress(i, lisftOfFiles.length);
-                updateMessage(String.format("%d / %d > %s", i + 1, lisftOfFiles.length, lisftOfFiles[i].getName()));
-                
-                decodeBase64(lisftOfFiles[i]);
-            }
-            catch (IOException e) {
+                decodeBase64(f);
+            } catch (IOException e) {
                 System.err.println(e);
-                updateMessage(String.format("Error en el archivo %s", lisftOfFiles[i].getName()));
+                updateMessage(String.format("Error en el archivo %s", f.getName()));
             }
+            decoded++;
         }
+        
         updateProgress(1, 1);
         updateMessage("Completado");
     }
@@ -174,32 +161,7 @@ public class FileManagement extends Task<Void> {
         fosWriter.close();
         fisReader.close();
         sc.close();
-    }
-    
-    private void decodeBase64_v1(File f) throws IOException, FileNotFoundException {
-        
-        FileInputStream fisReader = new FileInputStream(f);
-        Scanner sc = new Scanner(fisReader);
-
-        String filename = sc.nextLine();
-        String base64 = "";
-        do base64 += sc.nextLine(); while(sc.hasNextLine());
-        
-        byte[] decodedFile = Base64.getDecoder().decode(base64);
-        
-        File outputFile = new File(outputDir.getAbsolutePath() + File.separator + filename);
-        
-        outputFile.createNewFile();
-        
-        FileOutputStream fosWriter = new FileOutputStream(outputFile);
-        
-        fosWriter.write(decodedFile);
-
-        fosWriter.close();
-        fisReader.close();
-        sc.close();
-    }
-    
+    } 
 
     @Override
     protected Void call() throws Exception {

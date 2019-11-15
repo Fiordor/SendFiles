@@ -27,6 +27,8 @@ public class ListFileSyn {
     
     public synchronized int pointer() { return pointer; }
     
+    public synchronized boolean hasNext() { return pointer + 1 < length; }
+    
     public synchronized File get() {
         pointer++;
         return (pointer < length) ? listFile[pointer] : null;

@@ -41,7 +41,7 @@ public class FXMLDocumentController implements Initializable {
     @FXML
     private Button btEnviar;
     @FXML
-    private Button btRecivir;
+    private Button btRecibir;
     @FXML
     private HBox hboxInput;
     @FXML
@@ -89,13 +89,11 @@ public class FXMLDocumentController implements Initializable {
     private Thread[] tManagement;
     private FileManagement[] fManagement;
     
-    private File[][] splitListFiles;
-    private File[] splitListFilesPlusRest;
+    private ListFileSyn synFiles;
 
     
     @Override
     public void initialize(URL url, ResourceBundle rb) {
-        // TODO
         
         vboxEstados = null; lbEstados = null; pbEstados = null;
         
@@ -110,8 +108,7 @@ public class FXMLDocumentController implements Initializable {
         Thread[] tManagment = null;
         FileManagement[] fManagment = null;
         
-        splitListFiles = null;
-        splitListFilesPlusRest = null;
+        synFiles = null;
         
         int[] n = {4,5,6,7,8,9,10};
         reset(n);
@@ -147,13 +144,12 @@ public class FXMLDocumentController implements Initializable {
         Thread[] tManagment = null;
         FileManagement[] fManagment = null;
         
-        splitListFiles = null;
-        splitListFilesPlusRest = null;        
+        synFiles = null;    
         
         btCodificar.setDisable(false);
         btDecodificar.setDisable(false);
         btEnviar.setDisable(false);
-        btRecivir.setDisable(false);
+        btRecibir.setDisable(false);
         
         hboxInput.setDisable(false);
         hboxOutput.setDisable(false);
@@ -168,7 +164,7 @@ public class FXMLDocumentController implements Initializable {
                 case 0 : btCodificar.setDisable(true);   break;
                 case 1 : btDecodificar.setDisable(true); break;
                 case 2 : btEnviar.setDisable(true);      break;
-                case 3 : btRecivir.setDisable(true);     break;
+                case 3 : btRecibir.setDisable(true);     break;
                 case 4 : hboxInput.setDisable(true);     break;
                 case 5 : hboxOutput.setDisable(true);    break;
                 case 6 : hboxIp.setDisable(true);        break;
@@ -200,8 +196,11 @@ public class FXMLDocumentController implements Initializable {
                         @Override
                         public boolean accept(File pathname) { return !pathname.isDirectory(); }
                     });
-                    lbInput.setText(inputDir.length + " archicos seleccionados");                    
+                    lbInput.setText(inputDir.length + " archicos seleccionados");
                 }
+                
+                synFiles = new ListFileSyn(inputDir);
+                
             } else {
                 outputDir = dir;
                 lbOutput.setText(File.separator + dir.getName());
@@ -262,7 +261,7 @@ public class FXMLDocumentController implements Initializable {
             
             if (pass) {}//hace algo
             
-        } else if (btRecivir.isDisable()) {
+        } else if (btRecibir.isDisable()) {
             
             boolean pass = true;
             
@@ -325,14 +324,13 @@ public class FXMLDocumentController implements Initializable {
     
     private boolean prepareThreads(int option) {
         
-        splitWork();
-        
         tManagement = new Thread[cores];
         fManagement = new FileManagement[cores];
         
         vboxEstados = new VBox[cores];
         lbEstados = new Label[cores];
         pbEstados = new ProgressBar[cores];
+        
         for (int i = 0; i < pbEstados.length; i++) {
             
             vboxEstados[i] = new VBox();
@@ -353,11 +351,12 @@ public class FXMLDocumentController implements Initializable {
         switch (option) {
             case FileManagement.ENCODE_BASE64 : 
                 
-            case FileManagement.DECODE_BASE64 : 
-                if (splitListFilesPlusRest == null) { return false; }
+            case FileManagement.DECODE_BASE64 :
+                
+                if (synFiles == null) { return false; }
                 
                 for (int i = 0; i < cores - 1; i++) {
-                    fManagement[i] = new FileManagement(outputDir, splitListFiles[i], option);
+                    fManagement[i] = new FileManagement(outputDir, synFiles, option);
                     tManagement[i] = new Thread(fManagement[i]);
                     
                     lbEstados[i].textProperty().bind(fManagement[i].messageProperty());
@@ -366,7 +365,7 @@ public class FXMLDocumentController implements Initializable {
                     tManagement[i].setDaemon(true);
                 }
                 
-                fManagement[cores - 1] = new FileManagement(outputDir, splitListFilesPlusRest, option);
+                fManagement[cores - 1] = new FileManagement(outputDir, synFiles, option);
                 tManagement[cores - 1] = new Thread(fManagement[cores - 1]);
                 
                 lbEstados[cores - 1].textProperty().bind(fManagement[cores - 1].messageProperty());
@@ -376,28 +375,6 @@ public class FXMLDocumentController implements Initializable {
                 break;
         }
         return true;
-    }
-    
-    private void splitWork() {
-            
-        int numFileSplited = inputDir.length / cores;
-
-        splitListFiles = new File[cores - 1][numFileSplited];
-        splitListFilesPlusRest = new File[numFileSplited + (inputDir.length % cores)];
-
-        int contFullListFiles = 0;
-
-        for (int i = 0; i < splitListFiles.length; i++) {
-            for (int j = 0; j < splitListFiles[i].length; j++) {
-                splitListFiles[i][j] = inputDir[contFullListFiles];
-                contFullListFiles++;
-            }
-        }
-
-        for (int i = 0; i < splitListFilesPlusRest.length; i++) {
-            splitListFilesPlusRest[i] = inputDir[contFullListFiles];
-            contFullListFiles++;
-        }
     }
 
     @FXML
@@ -410,7 +387,7 @@ public class FXMLDocumentController implements Initializable {
     private void btEnviarOnAction(ActionEvent event) { int[] n = {2, 5}; reset(n); }
 
     @FXML
-    private void btRecivirOnAction(ActionEvent event) { int[] n = {3, 4, 6}; reset(n); }
+    private void btRecibirOnAction(ActionEvent event) { int[] n = {3, 4, 6}; reset(n); }
 
     @FXML
     private void btInputOnAction(ActionEvent event) { chooserFileManagement(true); }

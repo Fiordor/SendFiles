@@ -25,7 +25,7 @@
                               <Button fx:id="btCodificar" maxHeight="30.0" mnemonicParsing="false" onAction="#btCodificarOnAction" text="Codificar" />
                               <Button fx:id="btDecodificar" mnemonicParsing="false" onAction="#btDecodificarOnAtion" prefHeight="30.0" text="Decodificar" />
                               <Button fx:id="btEnviar" mnemonicParsing="false" onAction="#btEnviarOnAction" prefHeight="30.0" text="Enviar" />
-                              <Button fx:id="btRecivir" mnemonicParsing="false" onAction="#btRecivirOnAction" prefHeight="30.0" text="Recivir" />
+                              <Button fx:id="btRecibir" mnemonicParsing="false" onAction="#btRecibirOnAction" prefHeight="30.0" text="Recibir" />
                            </children>
                         </HBox>
                         <Separator />
