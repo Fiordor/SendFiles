@@ -375,7 +375,6 @@ public class FXMLDocumentController implements Initializable {
                 
                 break;
         }
-        
         return true;
     }
     
