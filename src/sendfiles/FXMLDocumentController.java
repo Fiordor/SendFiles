@@ -8,9 +8,12 @@ package sendfiles;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.net.ServerSocket;
+import java.net.Socket;
 import java.net.URL;
 import java.util.ResourceBundle;
+import java.util.Scanner;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.event.ActionEvent;
@@ -140,11 +143,13 @@ public class FXMLDocumentController implements Initializable {
         tfPort.setText("");        
         
         lbEstado.setText("Estado");
+        
+        cores = Runtime.getRuntime().availableProcessors();
 
         Thread[] tManagment = null;
         FileManagement[] fManagment = null;
         
-        synFiles = null;    
+        synFiles = null;
         
         btCodificar.setDisable(false);
         btDecodificar.setDisable(false);
@@ -220,8 +225,8 @@ public class FXMLDocumentController implements Initializable {
         
         if (btCodificar.isDisable() || btDecodificar.isDisable()) {
             if (inputDir != null && outputDir != null) {
-                if (btCodificar.isDisable()) { startWork(FileManagement.ENCODE_BASE64); }
-                if (btDecodificar.isDisable()) { startWork(FileManagement.DECODE_BASE64); }
+                if (btCodificar.isDisable()) { runThreads(FileManagement.ENCODE_BASE64); }
+                if (btDecodificar.isDisable()) { runThreads(FileManagement.DECODE_BASE64); }
             } else {
                 if (inputDir == null) { btInput.requestFocus(); lbEstado.setText("Selecciona carpeta contenedora de los archivos"); }
                 if (outputDir == null) { btOutput.requestFocus(); lbEstado.setText("Selecciona carpeta de salida"); }
@@ -300,7 +305,7 @@ public class FXMLDocumentController implements Initializable {
         }
     }
     
-    private void startWork(int option) {
+    private void runThreads(int option) {
         
         btLanzar.setDisable(true);
         
@@ -320,6 +325,15 @@ public class FXMLDocumentController implements Initializable {
                 lbEstado.setText("Decodificando base64 ...");
                 
                 for (int i = 0; i < tManagement.length; i++) { tManagement[i].start(); }
+                
+                break;
+                
+            case FileManagement.CLIENT_MODE : 
+                
+                prepareThreads(FileManagement.CLIENT_MODE);
+                lbEstado.setText("Enviado archivos ...");
+                
+                for (int i = 0; i < tManagement.length; i++) { tManagement[i].start(); }                
                 
                 break;
                                 
@@ -352,32 +366,34 @@ public class FXMLDocumentController implements Initializable {
             vboxMain.getChildren().add(vboxEstados[i]);
         }
         
-        switch (option) {
-            case FileManagement.ENCODE_BASE64 : 
-                
-            case FileManagement.DECODE_BASE64 :
-                
-                if (synFiles == null) { return false; }
-                
-                for (int i = 0; i < cores - 1; i++) {
+        
+        if (option == FileManagement.SERVER_MODE) {
+            
+        } else {
+            
+            if (synFiles == null) { return false; }
+
+            for (int i = 0; i < cores; i++) {
+                if (option == FileManagement.CLIENT_MODE) {
+                    String ip = tfIp0.getText().trim() + "." +
+                                tfIp1.getText().trim() + "." +
+                                tfIp2.getText().trim() + "." +
+                                tfIp3.getText().trim();
+                    int port = Integer.parseInt(tfPort.getText());
+                    fManagement[i] = new FileManagement(synFiles, ip, port, option);
+                } else {
                     fManagement[i] = new FileManagement(outputDir, synFiles, option);
-                    tManagement[i] = new Thread(fManagement[i]);
-                    
-                    lbEstados[i].textProperty().bind(fManagement[i].messageProperty());
-                    pbEstados[i].progressProperty().bind(fManagement[i].progressProperty());
-                    hboxMenu.disableProperty().bind(Bindings.notEqual(pbEstados[i].progressProperty(), new SimpleDoubleProperty(1)));
-                    tManagement[i].setDaemon(true);
                 }
                 
-                fManagement[cores - 1] = new FileManagement(outputDir, synFiles, option);
-                tManagement[cores - 1] = new Thread(fManagement[cores - 1]);
-                
-                lbEstados[cores - 1].textProperty().bind(fManagement[cores - 1].messageProperty());
-                pbEstados[cores - 1].progressProperty().bind(fManagement[cores - 1].progressProperty());
-                tManagement[cores - 1].setDaemon(true);
-                
-                break;
+                tManagement[i] = new Thread(fManagement[i]);
+
+                lbEstados[i].textProperty().bind(fManagement[i].messageProperty());
+                pbEstados[i].progressProperty().bind(fManagement[i].progressProperty());
+                hboxMenu.disableProperty().bind(Bindings.notEqual(pbEstados[i].progressProperty(), new SimpleDoubleProperty(1)));
+                tManagement[i].setDaemon(true);
+            }            
         }
+
         return true;
     }
 

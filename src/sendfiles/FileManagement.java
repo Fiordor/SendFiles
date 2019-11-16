@@ -30,26 +30,31 @@ public class FileManagement extends Task<Void> {
     public static final int MAX_FILE_SIZE = 20000000;//20MB
     
     private ListFileSyn synFiles;
-    private File outputDir;
+    private File dir;
     private String ip;
     private int port;
     private Socket client;
     
     private int option;
 
-    public FileManagement(File outputDir, ListFileSyn synFiles, int option) {
-        this.synFiles = synFiles; this.outputDir = outputDir;
+    public FileManagement(File dir, ListFileSyn synFiles, int option) {
+        this.synFiles = synFiles; this.dir = dir;
         ip = null; port = -1; client = null;
         this.option = option;
     }
     
+    public FileManagement(ListFileSyn synFiles, String ip, int port, int option) {
+        this.synFiles = synFiles; dir = null;
+        this.ip = ip; this.port = port; client = null;
+        this.option = option;
+    }    
+    
+    
     private void startEncodeBase64() {
         
         int encoded = 0;
-        
-        while (synFiles.hasNext()) {
-            
-            File f = synFiles.get();
+        File f = null;
+        while ((f = synFiles.get()) != null) {
 
             try {
                 updateProgress(encoded, synFiles.length());
@@ -72,7 +77,7 @@ public class FileManagement extends Task<Void> {
         String fName = f.getName().substring(0, f.getName().lastIndexOf('.'));
         
         PrintWriter pwWriter = new PrintWriter(
-                new File(outputDir.getAbsolutePath() + File.separator + fName + ".b64"));
+                new File(dir.getAbsolutePath() + File.separator + fName + ".b64"));
         
         pwWriter.println(f.getName());
         
@@ -114,10 +119,8 @@ public class FileManagement extends Task<Void> {
     private void startDecodeBase64() {
         
         int decoded = 0;
-        
-        while (synFiles.hasNext()) {
-            
-            File f = synFiles.get();
+        File f = null;
+        while ((f = synFiles.get()) != null) {
 
             try {
                 updateProgress(decoded, synFiles.length());
@@ -142,7 +145,7 @@ public class FileManagement extends Task<Void> {
         
         String filename = sc.nextLine();
 
-        File outputFile = new File(outputDir.getAbsolutePath() + File.separator + filename);
+        File outputFile = new File(dir.getAbsolutePath() + File.separator + filename);
         
         outputFile.createNewFile();
         
@@ -161,7 +164,50 @@ public class FileManagement extends Task<Void> {
         fosWriter.close();
         fisReader.close();
         sc.close();
-    } 
+    }
+    
+    private void startClientMode() {
+        
+        try {
+            
+            client = new Socket(ip, port);
+        
+            PrintWriter pwWriter = new PrintWriter(client.getOutputStream(), true);            
+            
+            File f = null;
+            while ((f = synFiles.get()) != null) {
+                
+                pwWriter.println(f.getName());
+
+                FileInputStream fisReader = new FileInputStream(f);
+
+                byte[] fileBytes = new byte[(int) f.length()];
+
+                int readBytes = 0;
+                if (fileBytes.length > MAX_FILE_SIZE) {
+                    while ((readBytes + MAX_FILE_SIZE) < fileBytes.length) {
+
+                        String encodedfile = writeEncodeBase64(fileBytes, readBytes, MAX_FILE_SIZE, fisReader);
+                        pwWriter.println(encodedfile);
+
+                        readBytes += MAX_FILE_SIZE;
+                        updateMessage(String.format("%s > %.1f MB / %.1f MB", f.getName(), readBytes / 1000000.0, fileBytes.length / 1000000.0));
+                        updateProgress(readBytes, fileBytes.length);
+                    }
+                }
+
+                String encodedfile = writeEncodeBase64(fileBytes, readBytes, fileBytes.length - readBytes, fisReader);
+                pwWriter.print(encodedfile);
+
+                pwWriter.close();
+                fisReader.close();
+                updateMessage("Completado");                
+            }
+        } catch (IOException e) {
+            updateMessage(e.getMessage());
+        }
+        updateProgress(1, 1);
+    }
 
     @Override
     protected Void call() throws Exception {
@@ -169,6 +215,7 @@ public class FileManagement extends Task<Void> {
         switch (option) {
             case ENCODE_BASE64 : startEncodeBase64(); break;
             case DECODE_BASE64 : startDecodeBase64(); break;
+            case CLIENT_MODE   : startClientMode();   break;
         }
         
         return null;
