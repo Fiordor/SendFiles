@@ -14,6 +14,7 @@ import java.net.Socket;
 import java.net.URL;
 import java.util.ResourceBundle;
 import java.util.Scanner;
+import java.util.concurrent.atomic.AtomicInteger;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.event.ActionEvent;
@@ -92,7 +93,8 @@ public class FXMLDocumentController implements Initializable {
     private Thread[] tManagement;
     private FileManagement[] fManagement;
     
-    private ListFileSyn synFiles;
+    private AtomicInteger pointer;
+    //private ListFileSyn synFiles;
 
     
     @Override
@@ -111,7 +113,8 @@ public class FXMLDocumentController implements Initializable {
         Thread[] tManagment = null;
         FileManagement[] fManagment = null;
         
-        synFiles = null;
+        pointer = null;
+        //synFiles = null;
         
         int[] n = {4,5,6,7,8,9,10};
         reset(n);
@@ -149,7 +152,8 @@ public class FXMLDocumentController implements Initializable {
         Thread[] tManagment = null;
         FileManagement[] fManagment = null;
         
-        synFiles = null;
+        pointer = null;
+        //synFiles = null;
         
         btCodificar.setDisable(false);
         btDecodificar.setDisable(false);
@@ -208,7 +212,7 @@ public class FXMLDocumentController implements Initializable {
                     
                 }
                 
-                synFiles = new ListFileSyn(inputDir);
+                //synFiles = new ListFileSyn(inputDir);
                 
             } else {
                 outputDir = dir;
@@ -371,7 +375,8 @@ public class FXMLDocumentController implements Initializable {
             
         } else {
             
-            if (synFiles == null) { return false; }
+            pointer = new AtomicInteger();
+            //if (synFiles == null) { return false; }
 
             for (int i = 0; i < cores; i++) {
                 if (option == FileManagement.CLIENT_MODE) {
@@ -380,9 +385,9 @@ public class FXMLDocumentController implements Initializable {
                                 tfIp2.getText().trim() + "." +
                                 tfIp3.getText().trim();
                     int port = Integer.parseInt(tfPort.getText());
-                    fManagement[i] = new FileManagement(synFiles, ip, port, option);
+                    fManagement[i] = new FileManagement(inputDir, pointer, ip, port, option);
                 } else {
-                    fManagement[i] = new FileManagement(outputDir, synFiles, option);
+                    fManagement[i] = new FileManagement(inputDir, outputDir, pointer, option);
                 }
                 
                 tManagement[i] = new Thread(fManagement[i]);

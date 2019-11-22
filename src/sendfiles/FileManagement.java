@@ -14,6 +14,7 @@ import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.Base64;
 import java.util.Scanner;
+import java.util.concurrent.atomic.AtomicInteger;
 import javafx.concurrent.Task;
 
 /**
@@ -29,7 +30,8 @@ public class FileManagement extends Task<Void> {
     
     public static final int MAX_FILE_SIZE = 20000000;//20MB
     
-    private ListFileSyn synFiles;
+    private File[] listFiles;
+    private AtomicInteger pointer;
     private File dir;
     private String ip;
     private int port;
@@ -37,14 +39,18 @@ public class FileManagement extends Task<Void> {
     
     private int option;
 
-    public FileManagement(File dir, ListFileSyn synFiles, int option) {
-        this.synFiles = synFiles; this.dir = dir;
+    public FileManagement(File[] listFiles, File dir, AtomicInteger pointer, int option) {
+        this.listFiles = listFiles;
+        this.pointer = pointer;
+        this.dir = dir;
         ip = null; port = -1; client = null;
         this.option = option;
     }
     
-    public FileManagement(ListFileSyn synFiles, String ip, int port, int option) {
-        this.synFiles = synFiles; dir = null;
+    public FileManagement(File[] listFiles, AtomicInteger pointer, String ip, int port, int option) {
+        this.listFiles = listFiles;
+        this.pointer = pointer;
+        dir = null;
         this.ip = ip; this.port = port; client = null;
         this.option = option;
     }    
@@ -54,11 +60,14 @@ public class FileManagement extends Task<Void> {
         
         int encoded = 0;
         File f = null;
-        while ((f = synFiles.get()) != null) {
+        int pointerValue = 0;
+        while ((pointerValue = pointer.getAndIncrement()) < listFiles.length) {
+            
+            f = listFiles[pointerValue];
 
             try {
-                updateProgress(encoded, synFiles.length());
-                updateMessage(String.format("%d / %d > %s", encoded, synFiles.length(), f.getName()));
+                updateProgress(encoded, listFiles.length);
+                updateMessage(String.format("%d / %d > %s", encoded, listFiles.length, f.getName()));
                 
                 encodeBase64(f);
             } catch (IOException e) {
@@ -120,11 +129,14 @@ public class FileManagement extends Task<Void> {
         
         int decoded = 0;
         File f = null;
-        while ((f = synFiles.get()) != null) {
-
+        int pointerValue = 0;
+        while ((pointerValue = pointer.getAndIncrement()) < listFiles.length) {
+            
+            f = listFiles[pointerValue];
+            
             try {
-                updateProgress(decoded, synFiles.length());
-                updateMessage(String.format("%d / %d > %s", decoded, synFiles.length(), f.getName()));
+                updateProgress(decoded, listFiles.length);
+                updateMessage(String.format("%d / %d > %s", decoded, listFiles.length, f.getName()));
                 
                 decodeBase64(f);
             } catch (IOException e) {
@@ -175,7 +187,10 @@ public class FileManagement extends Task<Void> {
             PrintWriter pwWriter = new PrintWriter(client.getOutputStream(), true);            
             
             File f = null;
-            while ((f = synFiles.get()) != null) {
+            int pointerValue = 0;
+            while ((pointerValue = pointer.getAndIncrement()) < listFiles.length) {
+                
+                f = listFiles[pointerValue];
                 
                 pwWriter.println(f.getName());
 
@@ -212,11 +227,17 @@ public class FileManagement extends Task<Void> {
     @Override
     protected Void call() throws Exception {
         
+        double t = System.currentTimeMillis();
+        
         switch (option) {
             case ENCODE_BASE64 : startEncodeBase64(); break;
             case DECODE_BASE64 : startDecodeBase64(); break;
             case CLIENT_MODE   : startClientMode();   break;
         }
+        
+        t = System.currentTimeMillis() - t;
+        
+        updateMessage(String.format("Tiempo: %.2f", t));
         
         return null;
     }
