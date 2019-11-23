@@ -28,7 +28,7 @@ public class FileManagement extends Task<Void> {
     public static final int CLIENT_MODE = 2;
     public static final int SERVER_MODE = 3;
     
-    public static final int MAX_FILE_SIZE = 20000000;//20MB
+    public static final int MAX_FILE_SIZE = 100000;//100KB
     
     private File[] listFiles;
     private AtomicInteger pointer;
@@ -66,7 +66,7 @@ public class FileManagement extends Task<Void> {
             f = listFiles[pointerValue];
 
             try {
-                updateProgress(encoded, listFiles.length);
+                
                 updateMessage(String.format("%d / %d > %s", encoded, listFiles.length, f.getName()));
                 
                 encodeBase64(f);
@@ -103,6 +103,7 @@ public class FileManagement extends Task<Void> {
                 
                 readBytes += MAX_FILE_SIZE;
                 updateMessage(String.format("%s > %.1f MB / %.1f MB", f.getName(), readBytes / 1000000.0, fileBytes.length / 1000000.0));
+                updateProgress(readBytes, fileBytes.length);
             }
         }
                 
@@ -135,7 +136,7 @@ public class FileManagement extends Task<Void> {
             f = listFiles[pointerValue];
             
             try {
-                updateProgress(decoded, listFiles.length);
+                
                 updateMessage(String.format("%d / %d > %s", decoded, listFiles.length, f.getName()));
                 
                 decodeBase64(f);
@@ -163,13 +164,18 @@ public class FileManagement extends Task<Void> {
         
         FileOutputStream fosWriter = new FileOutputStream(outputFile);
         
+        int readBytes = 0;
         do {
             
             String base64 = sc.nextLine();
             
             byte[] decodedFile = Base64.getDecoder().decode(base64);
-
-            fosWriter.write(decodedFile);
+            
+            readBytes += base64.length();
+            updateMessage(String.format("%s > %.1f MB / %.1f MB", f.getName(), readBytes / 1000000.0, f.length() / 1000000.0));            
+            updateProgress(readBytes, f.length());
+            
+            fosWriter.write(decodedFile);            
             
         } while(sc.hasNextLine());
         
@@ -215,19 +221,17 @@ public class FileManagement extends Task<Void> {
                 pwWriter.print(encodedfile);
 
                 pwWriter.close();
-                fisReader.close();
-                updateMessage("Completado");                
+                fisReader.close();            
             }
         } catch (IOException e) {
             updateMessage(e.getMessage());
         }
-        updateProgress(1, 1);
     }
 
     @Override
     protected Void call() throws Exception {
         
-        double t = System.currentTimeMillis();
+        long t = System.currentTimeMillis();
         
         switch (option) {
             case ENCODE_BASE64 : startEncodeBase64(); break;
@@ -237,7 +241,12 @@ public class FileManagement extends Task<Void> {
         
         t = System.currentTimeMillis() - t;
         
-        updateMessage(String.format("Tiempo: %.2f", t));
+        long m = (t / 1000) / 60;
+        long s = (t / 1000) - (m * 60);
+        t = t - (m * 60 * 1000) - (s * 1000);
+        
+        updateMessage(String.format("Tiempo: %d m %d s %d ms", m, s, t));
+        updateProgress(1, 1);
         
         return null;
     }

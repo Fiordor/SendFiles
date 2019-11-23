@@ -125,6 +125,7 @@ public class FXMLDocumentController implements Initializable {
         
         if (vboxEstados != null) {
             for (int i = 0; i < vboxEstados.length; i++) {
+                btLanzar.disableProperty().unbind();
                 lbEstados[i].textProperty().unbind();
                 pbEstados[i].progressProperty().unbind();
                 vboxMain.disableProperty().unbind();
@@ -272,7 +273,7 @@ public class FXMLDocumentController implements Initializable {
                 pass = false;
             }
             
-            if (pass) {}//hace algo
+            if (pass) { runThreads(FileManagement.CLIENT_MODE); }
             
         } else if (btRecibir.isDisable()) {
             
@@ -376,7 +377,6 @@ public class FXMLDocumentController implements Initializable {
         } else {
             
             pointer = new AtomicInteger();
-            //if (synFiles == null) { return false; }
 
             for (int i = 0; i < cores; i++) {
                 if (option == FileManagement.CLIENT_MODE) {
