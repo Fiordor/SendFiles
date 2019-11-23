@@ -365,10 +365,8 @@ public class FXMLDocumentController implements Initializable {
                 
             case FileManagement.SERVER_MODE : 
                 
-                prepareThreads(FileManagement.CLIENT_MODE);
+                prepareThreads(FileManagement.SERVER_MODE);
                 lbEstado.setText("Esperando archivos ...");
-                
-                for (int i = 0; i < tManagement.length; i++) { tManagement[i].start(); }
                 
                 ServerSocket server = null;
                 
@@ -380,10 +378,11 @@ public class FXMLDocumentController implements Initializable {
                 
                 int connected = 0;
                 while (connected < cores) {
-                    
+
                     try {
                         
                         Socket client = server.accept();
+                        
                         if (connected < cores) {
                             fManagement[connected] = new FileManagement(outputDir, client, option);
                             bindThread(connected);
@@ -394,6 +393,7 @@ public class FXMLDocumentController implements Initializable {
                     } catch (IOException e) {
                         lbEstado.setText(e.getMessage());
                     }
+                    connected++;
                 }
                 break;
         }

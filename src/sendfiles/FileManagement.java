@@ -28,7 +28,8 @@ public class FileManagement extends Task<Void> {
     public static final int CLIENT_MODE = 2;
     public static final int SERVER_MODE = 3;
     
-    public static final int MAX_FILE_SIZE = 100000;//100KB
+    //public static final int MAX_FILE_SIZE = 100000;//100KB
+    public static final int MAX_FILE_SIZE = 1000;//1KB
     
     private File[] listFiles;
     private AtomicInteger pointer;
@@ -225,11 +226,13 @@ public class FileManagement extends Task<Void> {
                 }
 
                 String encodedfile = writeEncodeBase64(fileBytes, readBytes, fileBytes.length - readBytes, fisReader);
-                pwWriter.print(encodedfile);
+                pwWriter.println(encodedfile);
 
-                pwWriter.close();
+                
                 fisReader.close();            
             }
+            pwWriter.close();
+            
         } catch (IOException e) {
             updateMessage(e.getMessage());
         }
@@ -243,7 +246,7 @@ public class FileManagement extends Task<Void> {
             File fAux = new File("temp");
             String data = "";
             File file = null;
-            PrintWriter pwWriter = new PrintWriter(fAux);
+            FileOutputStream fosWriter = new FileOutputStream(fAux);
 
             do {
 
@@ -251,30 +254,35 @@ public class FileManagement extends Task<Void> {
 
                 if (data.contains(".")) {
 
-                    pwWriter.close();
+                    fosWriter.close();
 
                     file = new File(dir.getAbsolutePath() + File.separator + data);
+                    file.createNewFile();
                     
                     updateMessage(String.format("%s", file.getName()));
                     updateProgress(0, 0);
                     
-                    try { pwWriter = new PrintWriter(file); }
-                    catch (FileNotFoundException e) { updateMessage(e.getMessage()); }
+                    try { fosWriter = new FileOutputStream(file); }
+                    catch (FileNotFoundException e) {
+                        updateMessage(e.getMessage());
+                        System.err.println(e.getMessage());
+                    }
 
                 } else {
                     updateMessage(String.format("%s > %d", file.getName(), file.length()));
                     updateProgress(0, 0);
                     
-                    pwWriter.print(data);
+                    fosWriter.write((Base64.getDecoder().decode(data)));
                 }
 
             } while (receive.hasNextLine());
 
-            pwWriter.close();
+            fosWriter.close();
             fAux.delete();
             
         } catch (IOException e) {
             updateMessage(e.getMessage());
+            System.err.println(e.getMessage());
         }
     }
 
