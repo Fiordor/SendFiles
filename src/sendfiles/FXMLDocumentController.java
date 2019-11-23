@@ -229,18 +229,25 @@ public class FXMLDocumentController implements Initializable {
         lbEstado.setText("");
         
         if (btCodificar.isDisable() || btDecodificar.isDisable()) {
+            
             if (inputDir != null && outputDir != null) {
+                
                 if (btCodificar.isDisable()) { runThreads(FileManagement.ENCODE_BASE64); }
                 if (btDecodificar.isDisable()) { runThreads(FileManagement.DECODE_BASE64); }
+                
             } else {
+                
                 if (inputDir == null) { btInput.requestFocus(); lbEstado.setText("Selecciona carpeta contenedora de los archivos"); }
                 if (outputDir == null) { btOutput.requestFocus(); lbEstado.setText("Selecciona carpeta de salida"); }
+                
             }
+            
         } else if (btEnviar.isDisable()) {
             
             boolean pass = true;
             
             if (inputDir == null) {
+                
                 btInput.requestFocus();
                 lbEstado.setText("Selecciona carpeta contenedora de los archivos");
                 pass = false;
@@ -250,24 +257,33 @@ public class FXMLDocumentController implements Initializable {
             tf[0] = tfIp0; tf[1] = tfIp1; tf[2] = tfIp2; tf[3] = tfIp3;
             
             for (TextField tfAux : tf) {
+                
                 String ip = tfAux.getText().trim();
 
                 try {
+                    
                     int n = Integer.parseInt(ip);
                     if (n > 255 || n < 0) throw new NumberFormatException();
+                    
                 } catch (NumberFormatException e) {
+                    
                     tfAux.requestFocus();
                     lbEstado.setText("Error en el formato de la IP");
                     pass = false;
+                    
                 }
             }
             
             try {
+                
                 int n = Integer.parseInt(tfPort.getText().trim());
+                
                 if (n < 0) throw new NumberFormatException();
                 if (n < 1024) { tfPort.requestFocus(); lbEstado.setText("Puerto reservado para servicios"); pass = false; }
                 if (n > 65534) { tfPort.requestFocus(); lbEstado.setText("Puerto fuera de rango"); pass = false; }
+                
             } catch (NumberFormatException e) {
+                
                 tfPort.requestFocus();
                 lbEstado.setText("Error en el formato del Port");
                 pass = false;
@@ -280,6 +296,7 @@ public class FXMLDocumentController implements Initializable {
             boolean pass = true;
             
             if (outputDir == null) {
+                
                 btOutput.requestFocus();
                 lbEstado.setText("Selecciona carpeta de salida");
                 pass = false;
@@ -288,24 +305,28 @@ public class FXMLDocumentController implements Initializable {
             if (!tfPort.getText().equals("")) {
                 
                 try {
+                    
                     int n = Integer.parseInt(tfPort.getText().trim());
+                    
                     if (n < 0) throw new NumberFormatException();
                     if (n < 1024) { tfPort.requestFocus(); lbEstado.setText("Puerto reservado para servicios"); pass = false; }
                     if (n > 65534) { tfPort.requestFocus(); lbEstado.setText("Puerto fuera de rango"); pass = false; }
                     
                     try { new ServerSocket(n).close(); }
                     catch (IOException e) {
+                        
                         tfPort.requestFocus();
                         lbEstado.setText("Este puerto ya esta siendo usado");
                         pass = false;                        
                     }
                 } catch (NumberFormatException e) {
+                    
                     tfPort.requestFocus();
                     lbEstado.setText("Error en el formato del Port");
                     pass = false;
                 }
                 
-                if (pass) {} //hace algo
+                if (pass) { runThreads(FileManagement.SERVER_MODE); }
             }            
         }
     }
@@ -338,10 +359,43 @@ public class FXMLDocumentController implements Initializable {
                 prepareThreads(FileManagement.CLIENT_MODE);
                 lbEstado.setText("Enviado archivos ...");
                 
-                for (int i = 0; i < tManagement.length; i++) { tManagement[i].start(); }                
+                for (int i = 0; i < tManagement.length; i++) { tManagement[i].start(); }    
                 
                 break;
-                                
+                
+            case FileManagement.SERVER_MODE : 
+                
+                prepareThreads(FileManagement.CLIENT_MODE);
+                lbEstado.setText("Esperando archivos ...");
+                
+                for (int i = 0; i < tManagement.length; i++) { tManagement[i].start(); }
+                
+                ServerSocket server = null;
+                
+                try {
+                    server = new ServerSocket(Integer.parseInt(tfPort.getText()));
+                } catch (IOException e) {
+                    lbEstado.setText(e.getMessage());
+                }
+                
+                int connected = 0;
+                while (connected < cores) {
+                    
+                    try {
+                        
+                        Socket client = server.accept();
+                        if (connected < cores) {
+                            fManagement[connected] = new FileManagement(outputDir, client, option);
+                            bindThread(connected);
+                            tManagement[connected].start();
+                        } else {
+                            client.close();
+                        }
+                    } catch (IOException e) {
+                        lbEstado.setText(e.getMessage());
+                    }
+                }
+                break;
         }
     }
     
@@ -371,10 +425,7 @@ public class FXMLDocumentController implements Initializable {
             vboxMain.getChildren().add(vboxEstados[i]);
         }
         
-        
-        if (option == FileManagement.SERVER_MODE) {
-            
-        } else {
+        if (option != FileManagement.SERVER_MODE) {
             
             pointer = new AtomicInteger();
 
@@ -385,21 +436,25 @@ public class FXMLDocumentController implements Initializable {
                                 tfIp2.getText().trim() + "." +
                                 tfIp3.getText().trim();
                     int port = Integer.parseInt(tfPort.getText());
+                    
                     fManagement[i] = new FileManagement(inputDir, pointer, ip, port, option);
                 } else {
                     fManagement[i] = new FileManagement(inputDir, outputDir, pointer, option);
                 }
-                
-                tManagement[i] = new Thread(fManagement[i]);
-
-                lbEstados[i].textProperty().bind(fManagement[i].messageProperty());
-                pbEstados[i].progressProperty().bind(fManagement[i].progressProperty());
-                hboxMenu.disableProperty().bind(Bindings.notEqual(pbEstados[i].progressProperty(), new SimpleDoubleProperty(1)));
-                tManagement[i].setDaemon(true);
+                bindThread(i);
             }            
         }
-
         return true;
+    }
+    
+    private void bindThread(int i) {
+        
+        tManagement[i] = new Thread(fManagement[i]);
+        
+        lbEstados[i].textProperty().bind(fManagement[i].messageProperty());
+        pbEstados[i].progressProperty().bind(fManagement[i].progressProperty());
+        hboxMenu.disableProperty().bind(Bindings.notEqual(pbEstados[i].progressProperty(), new SimpleDoubleProperty(1)));
+        tManagement[i].setDaemon(true);        
     }
 
     @FXML

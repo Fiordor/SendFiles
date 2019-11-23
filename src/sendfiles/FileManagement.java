@@ -53,8 +53,15 @@ public class FileManagement extends Task<Void> {
         dir = null;
         this.ip = ip; this.port = port; client = null;
         this.option = option;
-    }    
+    }
     
+    public FileManagement(File dir, Socket client, int option) {
+        listFiles = null;
+        pointer = null;
+        this.dir = dir;
+        ip = null; port = -1; this.client = client;
+        this.option = option;
+    }
     
     private void startEncodeBase64() {
         
@@ -227,6 +234,49 @@ public class FileManagement extends Task<Void> {
             updateMessage(e.getMessage());
         }
     }
+    
+    public void startServerMode() {
+
+        try {
+            
+            Scanner receive = new Scanner(client.getInputStream());
+            File fAux = new File("temp");
+            String data = "";
+            File file = null;
+            PrintWriter pwWriter = new PrintWriter(fAux);
+
+            do {
+
+                data = receive.nextLine();
+
+                if (data.contains(".")) {
+
+                    pwWriter.close();
+
+                    file = new File(dir.getAbsolutePath() + File.separator + data);
+                    
+                    updateMessage(String.format("%s", file.getName()));
+                    updateProgress(0, 0);
+                    
+                    try { pwWriter = new PrintWriter(file); }
+                    catch (FileNotFoundException e) { updateMessage(e.getMessage()); }
+
+                } else {
+                    updateMessage(String.format("%s > %d", file.getName(), file.length()));
+                    updateProgress(0, 0);
+                    
+                    pwWriter.print(data);
+                }
+
+            } while (receive.hasNextLine());
+
+            pwWriter.close();
+            fAux.delete();
+            
+        } catch (IOException e) {
+            updateMessage(e.getMessage());
+        }
+    }
 
     @Override
     protected Void call() throws Exception {
@@ -237,6 +287,7 @@ public class FileManagement extends Task<Void> {
             case ENCODE_BASE64 : startEncodeBase64(); break;
             case DECODE_BASE64 : startDecodeBase64(); break;
             case CLIENT_MODE   : startClientMode();   break;
+            case SERVER_MODE   : startServerMode();   break;
         }
         
         t = System.currentTimeMillis() - t;
